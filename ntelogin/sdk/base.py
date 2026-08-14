@@ -29,6 +29,7 @@ class BaseSdkClient:
     USER_AGENT: ClassVar[str] = ""
     error_cls: ClassVar[type[SdkError]] = SdkError
     timeout_s: float = 20.0
+    cookie_jar: httpx.Cookies | None = None
 
     def _default_headers(self) -> dict[str, str]:
         return {"User-Agent": self.USER_AGENT}
@@ -49,7 +50,20 @@ class BaseSdkClient:
             raise self.error_cls(f"[{path}] {payload.get('msg', '')}", payload)
         return payload["data"] if "data" in payload and payload["data"] is not None else {}
 
-    async def _request(
+    def _client_options(self) -> dict[str, Any]:
+        options: dict[str, Any] = {
+            "timeout": self.timeout_s,
+            "trust_env": False,
+        }
+        if self.cookie_jar is not None:
+            options["cookies"] = self.cookie_jar
+        if _proxy_provider is not None:
+            proxy = _proxy_provider()
+            if proxy != "":
+                options["proxy"] = proxy
+        return options
+
+    async def _request_raw(
         self,
         path: str,
         *,
@@ -57,7 +71,7 @@ class BaseSdkClient:
         body: dict[str, Any] | None = None,
         query: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
-    ) -> Any:
+    ) -> httpx.Response:
         merged = dict(self._default_headers())
         if headers is not None:
             merged.update(headers)
@@ -72,33 +86,49 @@ class BaseSdkClient:
         )
 
         tag = self.__class__.__name__
-        logger.debug(f"[NTE-SDK] → {tag} {method} {self.BASE_URL}{path} query={query} body={body}")
+        url = path if path.startswith("https://") else f"{self.BASE_URL}{path}"
+        logger.debug(f"[NTE-SDK] → {tag} {method} {path}")
 
-        proxy: str | None = None
-        if _proxy_provider:
-            candidate = _proxy_provider()
-            if candidate:
-                proxy = candidate
         try:
-            async with httpx.AsyncClient(timeout=self.timeout_s, proxy=proxy, trust_env=False) as client:
+            async with httpx.AsyncClient(**self._client_options()) as client:
                 resp = await client.request(
                     method,
-                    f"{self.BASE_URL}{path}",
+                    url,
                     headers=merged,
                     params=query,
                     data=body,
                 )
+                if self.cookie_jar is not None:
+                    self.cookie_jar.update(client.cookies)
         except httpx.HTTPError as err:
             logger.debug(f"[NTE-SDK] ✗ {tag} {method} {path} 网络错误: {err!r}")
             raise self.error_cls(f"[{path}] 网络请求失败") from err
 
-        logger.debug(f"[NTE-SDK] ← {tag} {method} {path} HTTP={resp.status_code} body={resp.text}")
+        logger.debug(f"[NTE-SDK] ← {tag} {method} {path} HTTP={resp.status_code}")
 
         if resp.status_code >= 400:
             raise self.error_cls(
                 f"[{path}] HTTP {resp.status_code}",
                 {"status_code": resp.status_code, "text": resp.text},
             )
+        return resp
+
+    async def _request(
+        self,
+        path: str,
+        *,
+        method: str = "GET",
+        body: dict[str, Any] | None = None,
+        query: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> Any:
+        resp = await self._request_raw(
+            path,
+            method=method,
+            body=body,
+            query=query,
+            headers=headers,
+        )
         if not resp.content:
             raise self.error_cls(f"[{path}] 响应为空", {"status_code": resp.status_code})
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -48,8 +48,19 @@ class LoginResultModel(_ProtocolModel):
 class LaohuCredential(_ProtocolModel):
     """登录成功后回传给 NTEUID 的凭据；NTEUID 拿到后走 login_by_laohu_token。"""
 
+    kind: Literal["tajiduo"] = "tajiduo"
     laohu_token: str = Field(description="老虎用户中心 token")
     laohu_user_id: str = Field(description="老虎用户中心 userId（数字字符串）")
+
+
+class WanmeiCredential(_ProtocolModel):
+    kind: Literal["wanmei"] = "wanmei"
+    logon: str = Field(description="完美世界登录凭据")
+    role_id: str = Field(description="异环角色 ID")
+    role_name: str = Field(description="异环角色名")
+
+
+Credential = Annotated[LaohuCredential | WanmeiCredential, Field(discriminator="kind")]
 
 
 class StatusResponse(_ProtocolModel):
@@ -57,4 +68,4 @@ class StatusResponse(_ProtocolModel):
 
     status: LoginStatus = Field(description="会话当前状态")
     msg: str = Field(default="", description="给用户看的展示文案")
-    credential: LaohuCredential | None = Field(default=None, description="终态为 success 时的凭据，否则为 None")
+    credential: Credential | None = Field(default=None, description="终态为 success 时的凭据，否则为 None")

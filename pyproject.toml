@@ -22,8 +22,11 @@ dev = ["ruff>=0.8.0"]
 [project.scripts]
 start = "ntelogin.main:main"
 
-[tool.setuptools]
-packages = ["ntelogin"]
+[tool.setuptools.packages.find]
+include = ["ntelogin*"]
+
+[tool.setuptools.package-data]
+ntelogin = ["templates/*.html", "templates/*.j2"]
 
 [tool.uv]
 package = true

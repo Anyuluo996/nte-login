@@ -3,14 +3,25 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
-from .schemas import LaohuCredential, LoginStatus, StatusResponse
+from .schemas import Credential, LoginStatus, StatusResponse
 from .sdk.laohu import LaohuDevice
+from .sdk.wanmei import WanmeiIdClient
+from .sdk.wanmei_model import WanmeiAreaCode, WanmeiLoginPage, WanmeiRole
 from .settings import settings
 from .utils.cache import TimedCache
 from .utils.logger import logger
 
 
-@dataclass
+@dataclass(slots=True, kw_only=True)
+class WanmeiLoginState:
+    client: WanmeiIdClient
+    login_page: WanmeiLoginPage
+    area_codes: list[WanmeiAreaCode]
+    roles: list[WanmeiRole] | None = None
+    logon: str | None = None
+
+
+@dataclass(slots=True, kw_only=True)
 class LoginSession:
     auth: str
     user_id: str
@@ -19,7 +30,8 @@ class LoginSession:
     device: LaohuDevice
     status: LoginStatus = "pending"
     msg: str = ""
-    credential: LaohuCredential | None = None
+    credential: Credential | None = None
+    wanmei: WanmeiLoginState | None = None
     listeners: list[asyncio.Queue[StatusResponse]] = field(default_factory=list)
 
     def snapshot(self) -> StatusResponse:
@@ -44,8 +56,7 @@ _SESSIONS: TimedCache = TimedCache(timeout_s=settings.session_ttl_s, maxsize=409
 
 def create_session(auth: str, user_id: str, bot_id: str, group_id: str | None) -> LoginSession:
     existing: LoginSession | None = _SESSIONS.get(auth)
-    if existing and existing.status == "pending":
-        # 重发同一 auth 的 start：保留旧 session 和 listener，避免断开浏览器/transport 端
+    if existing is not None:
         return existing
 
     session = LoginSession(
@@ -72,7 +83,7 @@ def publish(
     session: LoginSession,
     status: LoginStatus,
     msg: str = "",
-    credential: LaohuCredential | None = None,
+    credential: Credential | None = None,
 ) -> None:
     """更新会话状态并广播给所有 listener。终态（success/failed/expired）触发后 listener 应自行退出循环。"""
     session.status = status
