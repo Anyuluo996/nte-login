@@ -64,13 +64,17 @@ npm run dev
 
 在 Cloudflare 连接本仓库时使用以下配置：
 
-| 字段           | 值               |
-| -------------- | ---------------- |
-| 生产分支       | `main`           |
-| 根目录         | `/cloudflare`    |
-| 构建命令       | `npm run check`  |
-| 部署命令       | `npm run deploy` |
-| 非生产分支构建 | 关闭             |
+| 字段           | 值                       |
+| -------------- | ------------------------ |
+| Git 仓库       | `tyql688/nte-login`      |
+| 项目名称       | `nte-login`              |
+| 生产分支       | `main`                   |
+| 根目录         | `/cloudflare`            |
+| 构建命令       | `npm run check`          |
+| 部署命令       | `npm run deploy`         |
+| 非生产分支构建 | 关闭                     |
+| 构建监控路径   | 保持默认                 |
+| API 令牌       | 让 Cloudflare 创建新令牌 |
 
 新增一个加密的构建 Secret：
 
@@ -79,6 +83,10 @@ npm run dev
 | `SHARED_SECRET` | 与 NTEUID `NTELoginSecret` 相同 |
 
 `npm run deploy` 会在首次部署时把该构建 Secret 作为 Worker 运行时 Secret 上传。API 令牌应让 Cloudflare 自动新建，不要复用其他项目的受限令牌。
+
+保存配置后，选择“部署最新提交”（如界面提供），或向 `main` 推送一个新提交以触发构建。只修改分支或根目录不会重新运行旧构建，也不要重试修改配置前生成的历史构建。
+
+正确构建会在 `/cloudflare` 中检测到 `package.json`，并执行 `npm ci`、`npm run check` 和 `npm run deploy`。若日志执行 `uv sync`，或提示仓库根目录不存在 `package.json`，说明生产分支或根目录仍然配置错误。若 API 令牌显示“不可用”，必须先重新创建令牌，部署阶段无法绕过该授权。
 
 ### Wrangler
 
