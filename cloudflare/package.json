@@ -1,0 +1,29 @@
+{
+  "name": "nte-login-cloudflare",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@11.12.1",
+  "scripts": {
+    "check": "npm run format:check && npm run typecheck && npm test && npm run deploy:dry-run",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:dry-run": "wrangler deploy --dry-run",
+    "dev": "wrangler dev",
+    "format": "prettier --write --no-error-on-unmatched-pattern \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.mjs\" \"../.github/workflows/cloudflare-check.yml\" \"*.ts\" package.json tsconfig.json wrangler.jsonc README.md",
+    "format:check": "prettier --check --no-error-on-unmatched-pattern \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.mjs\" \"../.github/workflows/cloudflare-check.yml\" \"*.ts\" package.json tsconfig.json wrangler.jsonc README.md",
+    "test": "SHARED_SECRET=test-secret vitest run",
+    "test:watch": "SHARED_SECRET=test-secret vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.21.3",
+    "@cloudflare/workers-types": "5.20260817.1",
+    "prettier": "3.9.6",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10",
+    "wrangler": "4.123.0"
+  }
+}

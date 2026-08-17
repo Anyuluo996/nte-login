@@ -2,6 +2,8 @@
 
 NTEUID 外置登录服务。支持塔吉多与完美世界短信登录，让 bot 端无需对外暴露端口。
 
+仓库根目录是 Python 自部署版；Cloudflare Workers 版位于 [`cloudflare/`](cloudflare/README.md)，两者可以从同一个 `main` 分支独立部署。
+
 ## 启动
 
 ```sh

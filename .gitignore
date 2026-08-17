@@ -29,3 +29,10 @@ dist/
 
 logs/
 *.log
+
+# Cloudflare Workers 子项目
+node_modules/
+.wrangler/
+coverage/
+.dev.vars
+.dev.vars.*

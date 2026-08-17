@@ -1,0 +1,552 @@
+const LOGIN_HTML = `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>异环 · 登录</title>
+    <script src="https://cstatic.games.wanmei.com/captchas/ai/js/wanmeiCaptcha.min.js"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --text: rgba(255,255,255,.96);
+        --dim: rgba(255,255,255,.68);
+        --mute: rgba(255,255,255,.42);
+        --edge: rgba(255,255,255,.18);
+        --field: rgba(255,255,255,.08);
+        --accent: #d6c2ff;
+        --good: #86e5a2;
+        --bad: #ff9aa8;
+        --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { margin: 0; min-height: 100%; }
+      body { background: #050507; color: var(--text); font-family: var(--sans); }
+      .stage { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+      .stage video { width: 100%; height: 100%; object-fit: cover; filter: brightness(.48) saturate(1.08); }
+      main { min-height: 100vh; display: grid; place-items: center; padding: 28px 18px; }
+      .card {
+        width: min(420px, 100%); padding: 26px; border: 1px solid var(--edge); border-radius: 24px;
+        background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.06));
+        backdrop-filter: blur(18px) saturate(145%); box-shadow: 0 18px 58px rgba(0,0,0,.4);
+      }
+      .brand { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+      .brand img { width: 58px; height: 58px; border: 1px solid var(--edge); border-radius: 50%; object-fit: cover; }
+      h1 { margin: 0 0 5px; font-size: 26px; letter-spacing: .04em; }
+      .brand p, .lead { margin: 0; color: var(--dim); font-size: 13px; line-height: 1.6; }
+      .mode-switch {
+        display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px;
+        margin-bottom: 22px; border: 1px solid var(--edge); border-radius: 13px; background: rgba(0,0,0,.18);
+      }
+      .mode-switch button {
+        min-height: 0; padding: 10px 8px; border: 0; border-radius: 9px; color: var(--dim);
+        background: transparent; font-size: 13px; font-weight: 650; text-align: center;
+      }
+      .mode-switch button[aria-selected="true"] { color: var(--text); background: rgba(255,255,255,.16); }
+      .login-content[hidden], .login-panel[hidden], #wanmeiLoginPanel[hidden],
+      #wanmeiRolePanel[hidden], .done[hidden] { display: none; }
+      .lead { margin-bottom: 18px; }
+      .field { margin-bottom: 14px; }
+      label { display: block; margin: 0 0 7px 3px; color: var(--dim); font-size: 12px; }
+      .row { display: grid; grid-template-columns: 122px minmax(0,1fr); gap: 9px; }
+      .code-row { grid-template-columns: minmax(0,1fr) 112px; }
+      input, select, button {
+        width: 100%; min-height: 46px; padding: 0 14px; border: 1px solid var(--edge); border-radius: 13px;
+        color: var(--text); background: var(--field); font: inherit;
+      }
+      select option { color: #111; }
+      input:focus, select:focus { outline: 3px solid rgba(214,194,255,.14); border-color: rgba(214,194,255,.55); }
+      button { cursor: pointer; font-weight: 650; }
+      button:disabled { opacity: .42; cursor: not-allowed; }
+      .send { color: var(--accent); white-space: nowrap; }
+      .submit { margin-top: 4px; background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.12)); }
+      #captchaBox { display: flex; justify-content: center; min-height: 50px; margin: 2px 0 14px; }
+      .role { margin-top: 9px; text-align: left; }
+      .status { min-height: 20px; margin: 13px 0 0; text-align: center; font-size: 13px; }
+      .status.ok { color: var(--good); }
+      .status.fail { color: var(--bad); }
+      .footer { margin: 18px 0 0; color: var(--mute); font-size: 11px; text-align: center; }
+      .done { padding: 22px 0 8px; text-align: center; }
+      .done-mark {
+        display: grid; place-items: center; width: 72px; height: 72px; margin: 0 auto 20px;
+        border: 1px solid rgba(134,229,162,.45); border-radius: 50%;
+        color: var(--good); background: rgba(134,229,162,.18); font-size: 38px;
+      }
+      .done h1 { margin-bottom: 10px; }
+      .done p { margin: 0; color: var(--dim); font-size: 14px; line-height: 1.7; }
+      @media (max-width: 420px) {
+        .card { padding: 23px 19px; }
+        .row { grid-template-columns: 104px minmax(0,1fr); }
+        .code-row { grid-template-columns: minmax(0,1fr) 105px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <video autoplay muted loop playsinline poster="https://yh.wanmei.com/images/main260418/bg-video-poster.jpg"
+             src="https://yhvmg.wmupd.com/webops/yh/yh_bgvideo_20260418.mp4"></video>
+    </div>
+    <main>
+      <section class="card">
+        <div id="loginContent" class="login-content" __LOGIN_HIDDEN__>
+        <header class="brand">
+          <img src="https://s1.imagehub.cc/images/2026/04/22/f00a93d8c1a5958ea22e6a0d185d9453.md.png" alt="NTE" />
+          <div><h1>NTEUID</h1><p>异环账号登录</p></div>
+        </header>
+        <nav class="mode-switch" aria-label="登录方式">
+          <button id="tajiduoTab" type="button" data-mode="tajiduo" role="tab"
+                  aria-controls="tajiduoPanel">塔吉多登录</button>
+          <button id="wanmeiTab" type="button" data-mode="wanmei" role="tab"
+                  aria-controls="wanmeiPanel">完美登录</button>
+        </nav>
+
+        <section id="tajiduoPanel" class="login-panel" role="tabpanel">
+          <p class="lead">登录塔吉多账号，用于角色、签到和游戏数据功能。</p>
+          <form onsubmit="return false">
+            <div class="field">
+              <label for="tajiduoMobile">手机号</label>
+              <input id="tajiduoMobile" type="tel" inputmode="numeric" maxlength="11"
+                     placeholder="请输入 11 位手机号" autocomplete="tel" />
+            </div>
+            <div class="field">
+              <label for="tajiduoCode">短信验证码</label>
+              <div class="row code-row">
+                <input id="tajiduoCode" type="text" inputmode="numeric" maxlength="8"
+                       placeholder="请输入验证码" autocomplete="one-time-code" />
+                <button id="tajiduoSendBtn" class="send" type="button" disabled>获取验证码</button>
+              </div>
+            </div>
+            <button id="tajiduoLoginBtn" class="submit" type="submit" disabled>完成塔吉多登录</button>
+          </form>
+        </section>
+
+        <section id="wanmeiPanel" class="login-panel" role="tabpanel">
+          <p class="lead">登录完美世界账号，可查询刮刮乐数据，不影响塔吉多登录。</p>
+          <div id="wanmeiLoginPanel">
+            <div class="field">
+              <label for="wanmeiPhone">手机号</label>
+              <div class="row">
+                <select id="wanmeiAreaCode" aria-label="国家或地区区号" disabled></select>
+                <input id="wanmeiPhone" type="tel" inputmode="numeric"
+                       placeholder="请输入手机号" autocomplete="tel" disabled />
+              </div>
+            </div>
+            <div id="captchaBox"></div>
+            <div class="field">
+              <label for="wanmeiSmsCode">短信验证码</label>
+              <div class="row code-row">
+                <input id="wanmeiSmsCode" type="text" inputmode="numeric"
+                       placeholder="请输入验证码" autocomplete="one-time-code" disabled />
+                <button id="wanmeiSendBtn" class="send" type="button" disabled>获取验证码</button>
+              </div>
+            </div>
+            <button id="wanmeiLoginBtn" class="submit" type="button" disabled>登录</button>
+          </div>
+          <div id="wanmeiRolePanel" hidden>
+            <p class="lead">请选择用于查询刮刮乐数据的异环角色。</p>
+            <div id="wanmeiRoles"></div>
+          </div>
+        </section>
+
+        <p id="status" class="status"></p>
+        <p class="footer">会话 __USER_ID__ · __TTL_LABEL__</p>
+        </div>
+        <div id="donePanel" class="done" __DONE_HIDDEN__>
+          <div class="done-mark">✓</div>
+          <h1>登录完成</h1>
+          <p>登录结果已提交到 NTEUID，可以关闭页面回到聊天。</p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const AUTH = __AUTH__;
+      const REQUEST_TIMEOUT_MS = 15_000;
+
+      async function postJson(path, payload) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        try {
+          const response = await fetch(path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
+          return await response.json();
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      function showStatus(message, ok) {
+        const status = document.getElementById("status");
+        status.textContent = message;
+        status.className = \`status \${ok ? "ok" : "fail"}\`;
+      }
+
+      function finishLogin() {
+        document.getElementById("loginContent").hidden = true;
+        document.getElementById("donePanel").hidden = false;
+      }
+
+      function keepDigits(input, maxLength) {
+        input.addEventListener("input", () => {
+          input.value = input.value.replace(/\\D/g, "").slice(0, maxLength);
+        });
+      }
+
+      const tajiduoMobile = document.getElementById("tajiduoMobile");
+      const tajiduoCode = document.getElementById("tajiduoCode");
+      const tajiduoSendBtn = document.getElementById("tajiduoSendBtn");
+      const tajiduoLoginBtn = document.getElementById("tajiduoLoginBtn");
+
+      function validateTajiduoForm() {
+        const phoneOk = /^1\\d{10}$/.test(tajiduoMobile.value);
+        tajiduoSendBtn.disabled = !phoneOk || tajiduoSendBtn.dataset.cooldown === "1";
+        tajiduoLoginBtn.disabled = !(phoneOk && /^\\d{4,8}$/.test(tajiduoCode.value));
+      }
+
+      keepDigits(tajiduoMobile, 11);
+      keepDigits(tajiduoCode, 8);
+      tajiduoMobile.addEventListener("input", validateTajiduoForm);
+      tajiduoCode.addEventListener("input", validateTajiduoForm);
+
+      tajiduoSendBtn.addEventListener("click", async () => {
+        tajiduoSendBtn.disabled = true;
+        try {
+          const reply = await postJson("/nte/sendSmsCode", {
+            auth: AUTH,
+            mobile: tajiduoMobile.value.trim(),
+          });
+          showStatus(reply.msg, reply.ok);
+          if (!reply.ok) {
+            validateTajiduoForm();
+            return;
+          }
+
+          tajiduoSendBtn.dataset.cooldown = "1";
+          validateTajiduoForm();
+          let remain = 60;
+          const timer = setInterval(() => {
+            tajiduoSendBtn.textContent = \`\${remain}s\`;
+            remain -= 1;
+            if (remain < 0) {
+              clearInterval(timer);
+              tajiduoSendBtn.textContent = "获取验证码";
+              tajiduoSendBtn.dataset.cooldown = "0";
+              validateTajiduoForm();
+            }
+          }, 1000);
+        } catch {
+          validateTajiduoForm();
+          showStatus("短信验证码发送失败，请检查网络后重试", false);
+        }
+      });
+
+      tajiduoLoginBtn.addEventListener("click", async () => {
+        tajiduoLoginBtn.disabled = true;
+        tajiduoLoginBtn.textContent = "登录中";
+        try {
+          const reply = await postJson("/nte/login", {
+            auth: AUTH,
+            mobile: tajiduoMobile.value.trim(),
+            code: tajiduoCode.value.trim(),
+          });
+          if (reply.ok) {
+            finishLogin();
+            return;
+          }
+          showStatus(reply.msg, false);
+        } catch {
+          showStatus("登录请求失败，请检查网络后重试", false);
+        } finally {
+          tajiduoLoginBtn.textContent = "完成塔吉多登录";
+          validateTajiduoForm();
+        }
+      });
+
+      const wanmeiPanel = document.getElementById("wanmeiPanel");
+      const captchaBox = document.getElementById("captchaBox");
+      const wanmeiAreaCode = document.getElementById("wanmeiAreaCode");
+      const wanmeiPhone = document.getElementById("wanmeiPhone");
+      const wanmeiSmsCode = document.getElementById("wanmeiSmsCode");
+      const wanmeiSendBtn = document.getElementById("wanmeiSendBtn");
+      const wanmeiLoginBtn = document.getElementById("wanmeiLoginBtn");
+
+      let wanmeiCaptcha = null;
+      let wanmeiPrepare = null;
+      let wanmeiCapTicket = "";
+      let wanmeiSecCode = "";
+
+      function showWanmeiStatus(message, ok) {
+        if (!wanmeiPanel.hidden) showStatus(message, ok);
+      }
+
+      function initWanmeiCaptcha(capTicket) {
+        return new Promise((resolve) => {
+          const timeoutId = setTimeout(() => resolve(null), REQUEST_TIMEOUT_MS);
+          const captcha = new WanmeiCaptcha({ containerId: "captchaBox" });
+          captcha.init({
+            appId: "20047",
+            capTicket,
+            bindBtn: "",
+            callback: ({ secCode }) => {
+              if (captcha !== wanmeiCaptcha) return;
+              wanmeiSecCode = secCode;
+              setWanmeiFormEnabled(true);
+            },
+            onRefresh: () => {
+              if (captcha === wanmeiCaptcha) resetCaptcha();
+            },
+            initCallback: (failed) => {
+              clearTimeout(timeoutId);
+              resolve(failed ? null : captcha);
+            },
+          });
+        });
+      }
+
+      async function resetCaptcha(message = "") {
+        wanmeiCaptcha = null;
+        wanmeiSecCode = "";
+        const ready = await prepareWanmei();
+        if (ready && message) showWanmeiStatus(message, false);
+      }
+
+      function showWanmeiRoles(roles) {
+        document.getElementById("wanmeiLoginPanel").hidden = true;
+        document.getElementById("wanmeiRolePanel").hidden = false;
+        const holder = document.getElementById("wanmeiRoles");
+        holder.replaceChildren();
+        for (const role of roles) {
+          const button = document.createElement("button");
+          button.className = "role";
+          button.textContent = \`\${role.roleName}（\${role.roleId}）\`;
+          button.addEventListener("click", async () => {
+            button.disabled = true;
+            try {
+              const reply = await postJson("/nte/wanmei/selectRole", {
+                auth: AUTH,
+                roleId: role.roleId,
+              });
+              if (reply.ok) {
+                finishLogin();
+                return;
+              }
+              button.disabled = false;
+              showWanmeiStatus(reply.message, false);
+            } catch {
+              button.disabled = false;
+              showWanmeiStatus("角色提交失败，请检查网络后重试", false);
+            }
+          });
+          holder.appendChild(button);
+        }
+      }
+
+      async function loadWanmei() {
+        wanmeiCaptcha = null;
+        wanmeiSecCode = "";
+        setWanmeiFormEnabled(false);
+        captchaBox.replaceChildren();
+        showWanmeiStatus("正在加载官方智能验证…", true);
+        try {
+          const reply = await postJson("/nte/wanmei/prepare", { auth: AUTH });
+          if (!reply.ok) {
+            showWanmeiStatus(reply.message, false);
+            return false;
+          }
+
+          const selectedAreaCode = Number(wanmeiAreaCode.value || 1);
+          wanmeiAreaCode.replaceChildren();
+          for (const item of reply.areaCodes) {
+            const option = document.createElement("option");
+            option.value = item.areaCodeId;
+            option.textContent = \`\${item.areaName} +\${item.areaCode}\`;
+            option.selected = item.areaCodeId === selectedAreaCode;
+            wanmeiAreaCode.appendChild(option);
+          }
+          const captcha = await initWanmeiCaptcha(reply.capTicket);
+          if (captcha === null) {
+            captchaBox.replaceChildren();
+            showWanmeiStatus("智能验证加载失败，请重新点击完美登录", false);
+            return false;
+          }
+
+          wanmeiCapTicket = reply.capTicket;
+          wanmeiCaptcha = captcha;
+          setWanmeiFormEnabled(true);
+          showWanmeiStatus("", true);
+          return true;
+        } catch {
+          showWanmeiStatus("完美登录初始化失败，请重新点击完美登录", false);
+          return false;
+        }
+      }
+
+      function prepareWanmei() {
+        if (wanmeiCaptcha !== null) return Promise.resolve(true);
+        if (wanmeiPrepare !== null) return wanmeiPrepare;
+        wanmeiPrepare = loadWanmei().finally(() => { wanmeiPrepare = null; });
+        return wanmeiPrepare;
+      }
+
+      function setWanmeiFormEnabled(enabled) {
+        wanmeiAreaCode.disabled = !enabled;
+        wanmeiPhone.disabled = !enabled;
+        wanmeiSmsCode.disabled = !enabled;
+        wanmeiSendBtn.disabled = !enabled || !wanmeiSecCode || wanmeiSendBtn.dataset.cooldown === "1";
+        wanmeiLoginBtn.disabled = !enabled || !wanmeiSecCode;
+      }
+
+      wanmeiSendBtn.addEventListener("click", async () => {
+        const phone = wanmeiPhone.value.trim();
+        const secCode = wanmeiSecCode;
+
+        setWanmeiFormEnabled(false);
+        try {
+          const reply = await postJson("/nte/wanmei/sendSmsCode", {
+            auth: AUTH,
+            areaCodeId: Number(wanmeiAreaCode.value),
+            phone,
+            capTicket: wanmeiCapTicket,
+            secCode,
+          });
+          if (!reply.ok) {
+            await resetCaptcha(reply.message);
+            return;
+          }
+
+          wanmeiSendBtn.dataset.cooldown = "1";
+          setWanmeiFormEnabled(true);
+          showWanmeiStatus("短信验证码已发送", true);
+          let remain = 60;
+          const timer = setInterval(() => {
+            wanmeiSendBtn.textContent = \`\${remain}s\`;
+            remain -= 1;
+            if (remain < 0) {
+              clearInterval(timer);
+              wanmeiSendBtn.textContent = "获取验证码";
+              wanmeiSendBtn.dataset.cooldown = "0";
+              wanmeiSendBtn.disabled = !wanmeiSecCode;
+            }
+          }, 1000);
+        } catch {
+          await resetCaptcha("短信验证码发送失败，请检查网络后重试");
+        }
+      });
+
+      wanmeiLoginBtn.addEventListener("click", async () => {
+        const phone = wanmeiPhone.value.trim();
+        const smsCode = wanmeiSmsCode.value.trim();
+        const secCode = wanmeiSecCode;
+
+        setWanmeiFormEnabled(false);
+        wanmeiLoginBtn.textContent = "登录中";
+        try {
+          const reply = await postJson("/nte/wanmei/login", {
+            auth: AUTH,
+            areaCodeId: Number(wanmeiAreaCode.value),
+            phone,
+            smsCode,
+            capTicket: wanmeiCapTicket,
+            secCode,
+          });
+          if (reply.ok && reply.roles.length > 1) {
+            showWanmeiRoles(reply.roles);
+            return;
+          }
+          if (reply.ok) {
+            finishLogin();
+            return;
+          }
+          await resetCaptcha(reply.message);
+        } catch {
+          await resetCaptcha("登录请求失败，请检查网络后重试");
+        } finally {
+          wanmeiLoginBtn.textContent = "登录";
+        }
+      });
+
+      function switchMode(mode) {
+        const showTajiduo = mode === "tajiduo";
+        document.getElementById("tajiduoPanel").hidden = !showTajiduo;
+        document.getElementById("tajiduoTab").setAttribute("aria-selected", String(showTajiduo));
+        document.getElementById("wanmeiPanel").hidden = showTajiduo;
+        document.getElementById("wanmeiTab").setAttribute("aria-selected", String(!showTajiduo));
+        showStatus("", true);
+        if (showTajiduo) return;
+        if (wanmeiPrepare !== null) {
+          showStatus("正在加载官方智能验证…", true);
+          return;
+        }
+        if (wanmeiCaptcha === null) prepareWanmei();
+      }
+
+      for (const button of document.querySelectorAll("[data-mode]")) {
+        button.addEventListener("click", () => switchMode(button.dataset.mode));
+      }
+      if (!document.getElementById("loginContent").hidden) {
+        validateTajiduoForm();
+        switchMode("tajiduo");
+        prepareWanmei();
+      }
+    </script>
+  </body>
+</html>
+
+`;
+export const NOT_FOUND_HTML = `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>异环 · 链接已失效</title>
+    <style>
+      body { margin: 0; min-height: 100vh; background: #0e0c14; color: #e8e3f1; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+      .box { width: min(380px, 100%); text-align: center; padding: 40px 28px; border-radius: 22px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+      h1 { margin: 0 0 12px; font-size: 22px; font-weight: 600; letter-spacing: 0.04em; }
+      p { margin: 0; color: rgba(232,227,241,0.65); font-size: 14px; line-height: 1.7; }
+    </style>
+  </head>
+  <body>
+    <main class="box">
+      <h1>链接已失效</h1>
+      <p>请回到机器人对话重新发送 <code>nte登录</code>。</p>
+    </main>
+  </body>
+</html>`;
+
+function htmlEscape(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    const replacements: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return replacements[character] ?? character;
+  });
+}
+
+function ttlLabel(ttlS: number): string {
+  if (ttlS >= 60 && ttlS % 60 === 0) return `${ttlS / 60} 分钟内有效`;
+  return `${ttlS} 秒内有效`;
+}
+
+export function renderLoginPage(
+  auth: string,
+  userId: string,
+  ttlS: number,
+  done = false,
+): string {
+  return LOGIN_HTML.replaceAll(
+    "__AUTH__",
+    JSON.stringify(auth).replaceAll("<", "\\u003c"),
+  )
+    .replaceAll("__USER_ID__", htmlEscape(userId))
+    .replaceAll("__TTL_LABEL__", htmlEscape(ttlLabel(ttlS)))
+    .replaceAll("__LOGIN_HIDDEN__", done ? "hidden" : "")
+    .replaceAll("__DONE_HIDDEN__", done ? "" : "hidden");
+}

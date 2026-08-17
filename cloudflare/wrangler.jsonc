@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nte-login",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-17",
+  "workers_dev": true,
+  "secrets": {
+    "required": ["SHARED_SECRET"],
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "LOGIN_SESSIONS",
+        "class_name": "LoginSessionDurableObject",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["LoginSessionDurableObject"],
+    },
+  ],
+  "vars": {
+    "SESSION_TTL_S": "600",
+    "SIG_TTL_S": "300",
+    "SMS_COOLDOWN_S": "60",
+  },
+  "observability": {
+    "enabled": true,
+  },
+}

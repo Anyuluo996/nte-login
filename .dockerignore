@@ -20,3 +20,4 @@ Dockerfile
 .dockerignore
 README.md
 uv.lock
+cloudflare/
